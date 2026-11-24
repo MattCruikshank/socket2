@@ -61,11 +61,11 @@
 #![doc(test(attr(deny(warnings))))]
 
 use std::fmt;
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 use std::io::IoSlice;
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 use std::marker::PhantomData;
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 use std::mem;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
@@ -109,7 +109,7 @@ macro_rules! from {
     ($from: ty, $for: ty) => {
         impl From<$from> for $for {
             fn from(socket: $from) -> $for {
-                #[cfg(any(unix, all(target_os = "wasi", not(target_env = "p1"))))]
+                #[cfg(any(unix, any(all(target_os = "wasi", not(target_env = "p1")), target_os = "hermit")))]
                 unsafe {
                     <$for>::from_raw_fd(socket.into_raw_fd())
                 }
@@ -177,13 +177,13 @@ mod socket;
 mod sockref;
 
 #[cfg_attr(
-    any(unix, all(target_os = "wasi", not(target_env = "p1"))),
+    any(unix, any(all(target_os = "wasi", not(target_env = "p1")), target_os = "hermit")),
     path = "sys/unix.rs"
 )]
 #[cfg_attr(windows, path = "sys/windows.rs")]
 mod sys;
 
-#[cfg(not(any(windows, unix, all(target_os = "wasi", not(target_env = "p1")))))]
+#[cfg(not(any(windows, unix, any(all(target_os = "wasi", not(target_env = "p1")), target_os = "hermit"))))]
 compile_error!("Socket2 doesn't support the compile target");
 
 use sys::c_int;
@@ -195,7 +195,7 @@ pub use sockaddr::{sa_family_t, socklen_t, SockAddr, SockAddrStorage};
     target_os = "netbsd",
     target_os = "redox",
     target_os = "solaris",
-    target_os = "wasi",
+    any(target_os = "wasi", target_os = "hermit"),
 )))]
 pub use socket::InterfaceIndexOrAddress;
 pub use socket::Socket;
@@ -225,7 +225,7 @@ impl Domain {
     pub const IPV6: Domain = Domain(sys::AF_INET6);
 
     /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
-    #[cfg(not(target_os = "wasi"))]
+    #[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
     pub const UNIX: Domain = Domain(sys::AF_UNIX);
 
     /// Returns the correct domain for `address`.
@@ -281,7 +281,7 @@ impl Type {
     /// Type corresponding to `SOCK_SEQPACKET`.
     #[cfg(all(
         feature = "all",
-        not(any(target_os = "espidf", target_os = "wasi", target_os = "horizon"))
+        not(any(target_os = "espidf", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon"))
     ))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
@@ -291,7 +291,7 @@ impl Type {
         not(any(
             target_os = "redox",
             target_os = "espidf",
-            target_os = "wasi",
+            any(target_os = "wasi", target_os = "hermit"),
             target_os = "horizon"
         ))
     ))]
@@ -322,11 +322,11 @@ pub struct Protocol(c_int);
 
 impl Protocol {
     /// Protocol corresponding to `ICMPv4`.
-    #[cfg(not(target_os = "wasi"))]
+    #[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
     pub const ICMPV4: Protocol = Protocol(sys::IPPROTO_ICMP);
 
     /// Protocol corresponding to `ICMPv6`.
-    #[cfg(not(target_os = "wasi"))]
+    #[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
     pub const ICMPV6: Protocol = Protocol(sys::IPPROTO_ICMPV6);
 
     /// Protocol corresponding to `TCP`.
@@ -379,11 +379,11 @@ impl From<Protocol> for c_int {
 /// Flags for incoming messages.
 ///
 /// Flags provide additional information about incoming messages.
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct RecvFlags(c_int);
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 impl RecvFlags {
     /// Check if the message contains a truncated datagram.
     ///
@@ -542,7 +542,7 @@ impl TcpKeepalive {
         target_os = "windows",
         target_os = "cygwin",
         target_os = "nuttx",
-        all(target_os = "wasi", not(target_env = "p1")),
+        any(all(target_os = "wasi", not(target_env = "p1")), target_os = "hermit"),
     ))]
     pub const fn with_interval(self, interval: Duration) -> Self {
         Self {
@@ -574,7 +574,7 @@ impl TcpKeepalive {
             target_os = "cygwin",
             target_os = "windows",
             target_os = "nuttx",
-            all(target_os = "wasi", not(target_env = "p1")),
+            any(all(target_os = "wasi", not(target_env = "p1")), target_os = "hermit"),
         )
     ))]
     pub const fn with_retries(self, retries: u32) -> Self {
@@ -589,7 +589,7 @@ impl TcpKeepalive {
 ///
 /// This wraps `msghdr` on Unix and `WSAMSG` on Windows. Also see [`MsgHdrMut`]
 /// for the variant used by `recvmsg(2)`.
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 #[repr(transparent)]
 pub struct MsgHdr<'addr, 'bufs, 'control> {
     inner: sys::msghdr,
@@ -597,7 +597,7 @@ pub struct MsgHdr<'addr, 'bufs, 'control> {
     _lifetimes: PhantomData<(&'addr SockAddr, &'bufs IoSlice<'bufs>, &'control [u8])>,
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     /// Create a new `MsgHdr` with all empty/zero fields.
     #[allow(clippy::new_without_default)]
@@ -647,21 +647,21 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     }
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 impl<'name, 'bufs, 'control> fmt::Debug for MsgHdr<'name, 'bufs, 'control> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         "MsgHdr".fmt(fmt)
     }
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 unsafe impl Send for MsgHdr<'_, '_, '_> {}
 
 /// Configuration of a `recvmsg(2)` system call.
 ///
 /// This wraps `msghdr` on Unix and `WSAMSG` on Windows. Also see [`MsgHdr`] for
 /// the variant used by `sendmsg(2)`.
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 #[repr(transparent)]
 pub struct MsgHdrMut<'addr, 'bufs, 'control> {
     inner: sys::msghdr,
@@ -673,7 +673,7 @@ pub struct MsgHdrMut<'addr, 'bufs, 'control> {
     )>,
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     /// Create a new `MsgHdrMut` with all empty/zero fields.
     #[allow(clippy::new_without_default)]
@@ -728,12 +728,12 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     }
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         "MsgHdrMut".fmt(fmt)
     }
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 unsafe impl Send for MsgHdrMut<'_, '_, '_> {}

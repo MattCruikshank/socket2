@@ -7,9 +7,9 @@
 // except according to those terms.
 
 use std::cmp::min;
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 use std::ffi::OsStr;
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 use std::io::IoSlice;
 use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
@@ -46,11 +46,11 @@ use std::num::NonZeroU32;
 ))]
 use std::num::NonZeroUsize;
 use std::os::fd::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 use std::os::unix::ffi::OsStrExt;
 #[cfg(all(feature = "all", unix))]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 use std::path::Path;
 use std::ptr;
 use std::time::{Duration, Instant};
@@ -67,16 +67,16 @@ use std::{io, slice};
 use libc::ssize_t;
 use libc::{in6_addr, in_addr};
 
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 use crate::SockAddrStorage;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 use crate::{MsgHdr, MsgHdrMut, RecvFlags};
 
 pub(crate) use std::ffi::c_int;
 
 // Used in `Domain`.
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 pub(crate) use libc::AF_UNIX;
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -87,14 +87,14 @@ pub(crate) use libc::SOCK_DCCP;
     not(any(
         target_os = "redox",
         target_os = "espidf",
-        target_os = "wasi",
+        any(target_os = "wasi", target_os = "hermit"),
         target_os = "horizon"
     ))
 ))]
 pub(crate) use libc::SOCK_RAW;
 #[cfg(all(
     feature = "all",
-    not(any(target_os = "espidf", target_os = "wasi", target_os = "horizon"))
+    not(any(target_os = "espidf", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon"))
 ))]
 pub(crate) use libc::SOCK_SEQPACKET;
 pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
@@ -115,7 +115,7 @@ pub(crate) use libc::IPPROTO_SCTP;
     )
 ))]
 pub(crate) use libc::IPPROTO_UDPLITE;
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6};
 pub(crate) use libc::{IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
@@ -128,14 +128,14 @@ pub(crate) use libc::{
 #[cfg(not(any(
     target_os = "redox",
     target_os = "espidf",
-    target_os = "wasi",
+    any(target_os = "wasi", target_os = "hermit"),
     target_os = "horizon"
 )))]
 pub(crate) use libc::MSG_TRUNC;
-#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"))))]
 pub(crate) use libc::SO_OOBINLINE;
 // Used in `Socket`.
-#[cfg(not(any(target_os = "nto", target_os = "nuttx")))]
+#[cfg(not(any(target_os = "nto", target_os = "nuttx", target_os = "hermit")))]
 pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
 #[cfg(all(feature = "all", target_os = "linux"))]
 pub(crate) use libc::IPV6_HDRINCL;
@@ -153,7 +153,7 @@ pub(crate) use libc::IPV6_HDRINCL;
         target_os = "haiku",
         target_os = "espidf",
         target_os = "vita",
-        target_os = "wasi",
+        any(target_os = "wasi", target_os = "hermit"),
         target_os = "cygwin",
         target_os = "horizon"
     ))
@@ -172,7 +172,7 @@ pub(crate) use libc::IPV6_RECVHOPLIMIT;
     target_os = "espidf",
     target_os = "nuttx",
     target_os = "vita",
-    target_os = "wasi",
+    any(target_os = "wasi", target_os = "hermit"),
     target_os = "horizon"
 )))]
 pub(crate) use libc::IPV6_RECVTCLASS;
@@ -182,7 +182,7 @@ pub(crate) use libc::IPV6_RECVTCLASS;
         target_os = "redox",
         target_os = "espidf",
         target_os = "nuttx",
-        target_os = "wasi",
+        any(target_os = "wasi", target_os = "hermit"),
         target_os = "horizon"
     ))
 ))]
@@ -202,7 +202,7 @@ pub(crate) use libc::IP_HDRINCL;
     target_os = "espidf",
     target_os = "nuttx",
     target_os = "vita",
-    target_os = "wasi",
+    any(target_os = "wasi", target_os = "hermit"),
     target_os = "cygwin",
     target_os = "horizon"
 )))]
@@ -212,7 +212,7 @@ pub(crate) use libc::IP_RECVTOS;
     target_os = "redox",
     target_os = "solaris",
     target_os = "haiku",
-    target_os = "wasi",
+    any(target_os = "wasi", target_os = "hermit"),
 )))]
 pub(crate) use libc::IP_TOS;
 #[cfg(not(any(
@@ -239,11 +239,70 @@ pub(crate) use libc::SO_PASSCRED;
 ))]
 pub(crate) use libc::SO_PRIORITY;
 pub(crate) use libc::{
-    ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
-    IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
-    IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF, SO_RCVTIMEO,
-    SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
+    IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, IPV6_V6ONLY, IP_ADD_MEMBERSHIP,
+    IP_DROP_MEMBERSHIP, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET,
+    SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
+    SO_SNDTIMEO, TCP_NODELAY,
 };
+#[cfg(not(target_os = "hermit"))]
+pub(crate) use libc::{ip_mreq as IpMreq, linger, IPV6_UNICAST_HOPS, SO_TYPE};
+#[cfg(target_os = "hermit")]
+pub(crate) use self::hermit::{
+    ip_mreq as IpMreq, ipv6_mreq as Ipv6Mreq, linger, IPV6_UNICAST_HOPS, SO_TYPE, TCP_KEEPCNT,
+    TCP_KEEPINTVL,
+};
+#[cfg(target_os = "hermit")]
+use self::hermit::{suseconds_t, timeval, TCP_KEEPIDLE as KEEPALIVE_TIME};
+#[cfg(not(target_os = "hermit"))]
+use libc::{suseconds_t, timeval};
+
+/// Definitions missing from Hermit's `libc`.
+///
+/// Hermit's kernel implements only a few socket options (`SO_REUSEADDR`, `TCP_NODELAY`) and
+/// returns `EINVAL` for every other option, so the option numbers below only need to be
+/// distinct from those; using them yields a proper `EINVAL` error at runtime instead of a
+/// compile error. Struct layouts follow the usual BSD/POSIX definitions.
+#[cfg(target_os = "hermit")]
+#[allow(non_camel_case_types)]
+mod hermit {
+    use libc::{c_int, c_uint, in6_addr, in_addr, time_t};
+
+    pub(crate) type suseconds_t = i64;
+
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    pub(crate) struct timeval {
+        pub(crate) tv_sec: time_t,
+        pub(crate) tv_usec: suseconds_t,
+    }
+
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    pub(crate) struct linger {
+        pub(crate) l_onoff: c_int,
+        pub(crate) l_linger: c_int,
+    }
+
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    pub(crate) struct ip_mreq {
+        pub(crate) imr_multiaddr: in_addr,
+        pub(crate) imr_interface: in_addr,
+    }
+
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    pub(crate) struct ipv6_mreq {
+        pub(crate) ipv6mr_multiaddr: in6_addr,
+        pub(crate) ipv6mr_interface: c_uint,
+    }
+
+    pub(crate) const SO_TYPE: c_int = 0x1008;
+    pub(crate) const IPV6_UNICAST_HOPS: c_int = 16;
+    pub(crate) const TCP_KEEPIDLE: c_int = 4;
+    pub(crate) const TCP_KEEPINTVL: c_int = 5;
+    pub(crate) const TCP_KEEPCNT: c_int = 6;
+}
 #[cfg(not(any(
     target_os = "dragonfly",
     target_os = "haiku",
@@ -255,7 +314,7 @@ pub(crate) use libc::{
     target_os = "nto",
     target_os = "espidf",
     target_os = "vita",
-    target_os = "wasi",
+    any(target_os = "wasi", target_os = "hermit"),
     target_os = "horizon"
 )))]
 pub(crate) use libc::{
@@ -297,7 +356,7 @@ pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
 pub(crate) use libc::{
     IPV6_JOIN_GROUP as IPV6_ADD_MEMBERSHIP, IPV6_LEAVE_GROUP as IPV6_DROP_MEMBERSHIP,
 };
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 pub(crate) use libc::{IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IP_MULTICAST_IF, MSG_OOB};
 #[cfg(all(
     feature = "all",
@@ -344,6 +403,7 @@ use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
     target_os = "tvos",
     target_os = "watchos",
     target_os = "vita",
+    target_os = "hermit",
 )))]
 use libc::TCP_KEEPIDLE as KEEPALIVE_TIME;
 
@@ -352,7 +412,12 @@ macro_rules! syscall {
     ($fn: ident ( $($arg: expr),* $(,)* ) ) => {{
         #[allow(unused_unsafe)]
         let res = unsafe { libc::$fn($($arg, )*) };
-        if res == -1 {
+        // Hermit's syscalls set `errno` but return `-errno` rather than `-1`.
+        #[cfg(not(target_os = "hermit"))]
+        let failed = res == -1;
+        #[cfg(target_os = "hermit")]
+        let failed = res < 0;
+        if failed {
             Err(std::io::Error::last_os_error())
         } else {
             Ok(res)
@@ -457,7 +522,7 @@ impl_debug!(
     Domain,
     libc::AF_INET,
     libc::AF_INET6,
-    #[cfg(not(target_os = "wasi"))]
+    #[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
     libc::AF_UNIX,
     #[cfg(any(target_os = "android", target_os = "fuchsia", target_os = "linux"))]
     libc::AF_PACKET,
@@ -482,7 +547,7 @@ impl Type {
             target_os = "netbsd",
             target_os = "openbsd",
             target_os = "cygwin",
-            all(target_os = "wasi", not(target_env = "p1")),
+            any(all(target_os = "wasi", not(target_env = "p1")), target_os = "hermit"),
         )
     ))]
     pub const fn nonblocking(self) -> Type {
@@ -541,7 +606,7 @@ impl_debug!(
     #[cfg(not(any(
         target_os = "redox",
         target_os = "espidf",
-        target_os = "wasi",
+        any(target_os = "wasi", target_os = "hermit"),
         target_os = "horizon"
     )))]
     libc::SOCK_RAW,
@@ -549,11 +614,11 @@ impl_debug!(
         target_os = "redox",
         target_os = "haiku",
         target_os = "espidf",
-        target_os = "wasi",
+        any(target_os = "wasi", target_os = "hermit"),
         target_os = "horizon"
     )))]
     libc::SOCK_RDM,
-    #[cfg(not(any(target_os = "espidf", target_os = "wasi", target_os = "horizon")))]
+    #[cfg(not(any(target_os = "espidf", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
     libc::SOCK_SEQPACKET,
     /* TODO: add these optional bit OR-ed flags:
     #[cfg(any(
@@ -581,9 +646,9 @@ impl_debug!(
 
 impl_debug!(
     Protocol,
-    #[cfg(not(target_os = "wasi"))]
+    #[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
     libc::IPPROTO_ICMP,
-    #[cfg(not(target_os = "wasi"))]
+    #[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
     libc::IPPROTO_ICMPV6,
     libc::IPPROTO_TCP,
     libc::IPPROTO_UDP,
@@ -608,7 +673,7 @@ impl_debug!(
 );
 
 /// Unix-only API.
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 impl RecvFlags {
     /// Check if the message terminates a record.
     ///
@@ -661,7 +726,7 @@ impl RecvFlags {
     }
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 impl std::fmt::Debug for RecvFlags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = f.debug_struct("RecvFlags");
@@ -712,14 +777,14 @@ impl<'a> MaybeUninitSlice<'a> {
 }
 
 /// Returns the offset of the `sun_path` member of the passed unix socket address.
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 pub(crate) fn offset_of_path(storage: &libc::sockaddr_un) -> usize {
     let base = storage as *const _ as usize;
     let path = ptr::addr_of!(storage.sun_path) as usize;
     path - base
 }
 
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 #[allow(unsafe_op_in_unsafe_fn)]
 pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     let mut storage = SockAddrStorage::zeroed();
@@ -766,39 +831,39 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
 }
 
 // Used in `MsgHdr`.
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) use libc::msghdr;
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
     msg.msg_name = name.as_ptr() as *mut _;
     msg.msg_namelen = name.len();
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 #[allow(clippy::unnecessary_cast)] // IovLen type can be `usize`.
 pub(crate) fn set_msghdr_iov(msg: &mut msghdr, ptr: *mut libc::iovec, len: usize) {
     msg.msg_iov = ptr;
     msg.msg_iovlen = min(len, IovLen::MAX as usize) as IovLen;
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn set_msghdr_control(msg: &mut msghdr, ptr: *mut libc::c_void, len: usize) {
     msg.msg_control = ptr;
     msg.msg_controllen = len as _;
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn set_msghdr_flags(msg: &mut msghdr, flags: c_int) {
     msg.msg_flags = flags;
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn msghdr_flags(msg: &msghdr) -> RecvFlags {
     RecvFlags(msg.msg_flags)
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn msghdr_control_len(msg: &msghdr) -> usize {
     msg.msg_controllen as _
 }
@@ -840,7 +905,7 @@ impl SockAddr {
 }
 
 /// Unix only API (not available on WASI).
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 impl SockAddr {
     /// Returns true if this address is an unnamed address from the `AF_UNIX` family (for local
     /// interprocess communication), false otherwise.
@@ -1033,14 +1098,14 @@ pub(crate) fn getpeername(fd: RawSocket) -> io::Result<SockAddr> {
         .map(|(_, addr)| addr)
 }
 
-#[cfg(not(target_os = "wasi"))]
+#[cfg(not(any(target_os = "wasi", target_os = "hermit")))]
 pub(crate) fn try_clone(fd: RawSocket) -> io::Result<RawSocket> {
     syscall!(fcntl(fd, libc::F_DUPFD_CLOEXEC, 0))
 }
 
 #[cfg(all(
     feature = "all",
-    any(unix, all(target_os = "wasi", not(target_env = "p1"))),
+    any(unix, any(all(target_os = "wasi", not(target_env = "p1")), target_os = "hermit")),
     not(target_os = "vita")
 ))]
 pub(crate) fn nonblocking(fd: RawSocket) -> io::Result<bool> {
@@ -1125,7 +1190,7 @@ pub(crate) fn peek_sender(fd: RawSocket) -> io::Result<SockAddr> {
     Ok(sender)
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn recv_vectored(
     fd: RawSocket,
     bufs: &mut [crate::MaybeUninitSlice<'_>],
@@ -1136,7 +1201,7 @@ pub(crate) fn recv_vectored(
     Ok((n, msg.flags()))
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn recv_from_vectored(
     fd: RawSocket,
     bufs: &mut [crate::MaybeUninitSlice<'_>],
@@ -1158,7 +1223,7 @@ pub(crate) fn recv_from_vectored(
     Ok((n, msg.flags(), addr))
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn recvmsg(
     fd: RawSocket,
     msg: &mut MsgHdrMut<'_, '_, '_>,
@@ -1177,7 +1242,7 @@ pub(crate) fn send(fd: RawSocket, buf: &[u8], flags: c_int) -> io::Result<usize>
     .map(|n| n as usize)
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn send_vectored(
     fd: RawSocket,
     bufs: &[IoSlice<'_>],
@@ -1204,7 +1269,7 @@ pub(crate) fn send_to(
     .map(|n| n as usize)
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn send_to_vectored(
     fd: RawSocket,
     bufs: &[IoSlice<'_>],
@@ -1215,7 +1280,7 @@ pub(crate) fn send_to_vectored(
     sendmsg(fd, &msg, flags)
 }
 
-#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit"), target_os = "horizon")))]
 pub(crate) fn sendmsg(fd: RawSocket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
     syscall!(sendmsg(fd, &msg.inner, flags)).map(|n| n as usize)
 }
@@ -1225,7 +1290,7 @@ pub(crate) fn timeout_opt(fd: RawSocket, opt: c_int, val: c_int) -> io::Result<O
     unsafe { getsockopt(fd, opt, val).map(from_timeval) }
 }
 
-const fn from_timeval(duration: libc::timeval) -> Option<Duration> {
+const fn from_timeval(duration: timeval) -> Option<Duration> {
     if duration.tv_sec == 0 && duration.tv_usec == 0 {
         None
     } else {
@@ -1246,15 +1311,15 @@ pub(crate) fn set_timeout_opt(
     unsafe { setsockopt(fd, opt, val, duration) }
 }
 
-fn into_timeval(duration: Option<Duration>) -> libc::timeval {
+fn into_timeval(duration: Option<Duration>) -> timeval {
     match duration {
         // https://github.com/rust-lang/libc/issues/1848
         #[cfg_attr(target_env = "musl", allow(deprecated))]
-        Some(duration) => libc::timeval {
+        Some(duration) => timeval {
             tv_sec: min(duration.as_secs(), libc::time_t::MAX as u64) as libc::time_t,
-            tv_usec: duration.subsec_micros() as libc::suseconds_t,
+            tv_usec: duration.subsec_micros() as suseconds_t,
         },
-        None => libc::timeval {
+        None => timeval {
             tv_sec: 0,
             tv_usec: 0,
         },
@@ -1303,16 +1368,16 @@ pub(crate) fn set_tcp_keepalive(fd: RawSocket, keepalive: &TcpKeepalive) -> io::
         target_os = "watchos",
         target_os = "cygwin",
         target_os = "nuttx",
-        all(target_os = "wasi", not(target_env = "p1")),
+        any(all(target_os = "wasi", not(target_env = "p1")), target_os = "hermit"),
     ))]
     {
         if let Some(interval) = keepalive.interval {
             let secs = into_secs(interval);
-            unsafe { setsockopt(fd, libc::IPPROTO_TCP, libc::TCP_KEEPINTVL, secs)? }
+            unsafe { setsockopt(fd, libc::IPPROTO_TCP, TCP_KEEPINTVL, secs)? }
         }
 
         if let Some(retries) = keepalive.retries {
-            unsafe { setsockopt(fd, libc::IPPROTO_TCP, libc::TCP_KEEPCNT, retries as c_int)? }
+            unsafe { setsockopt(fd, libc::IPPROTO_TCP, TCP_KEEPCNT, retries as c_int)? }
         }
     }
 
@@ -1338,7 +1403,10 @@ fn into_secs(duration: Duration) -> c_int {
 /// Get the flags using `cmd`.
 #[cfg(not(target_os = "vita"))]
 fn fcntl_get(fd: RawSocket, cmd: c_int) -> io::Result<c_int> {
-    syscall!(fcntl(fd, cmd))
+    #[cfg(not(target_os = "hermit"))]
+    return syscall!(fcntl(fd, cmd));
+    #[cfg(target_os = "hermit")]
+    return syscall!(fcntl(fd, cmd, 0));
 }
 
 /// Add `flag` to the current set flags of `F_GETFD`.
@@ -1438,7 +1506,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     target_os = "espidf",
     target_os = "vita",
     target_os = "cygwin",
-    target_os = "wasi",
+    any(target_os = "wasi", target_os = "hermit"),
     target_os = "horizon"
 )))]
 pub(crate) const fn to_mreqn(
@@ -1561,7 +1629,7 @@ impl crate::Socket {
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
-            target_os = "wasi",
+            any(target_os = "wasi", target_os = "hermit"),
             target_os = "horizon"
         ),
         allow(rustdoc::broken_intra_doc_links)
@@ -1653,7 +1721,7 @@ impl crate::Socket {
     /// For more information about this option, see [`set_tcp_mss`].
     ///
     /// [`set_tcp_mss`]: crate::Socket::set_tcp_mss
-    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "wasi"))))]
+    #[cfg(all(feature = "all", not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit")))))]
     pub fn tcp_mss(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_MAXSEG)
@@ -1665,7 +1733,7 @@ impl crate::Socket {
     ///
     /// The `TCP_MAXSEG` option denotes the TCP Maximum Segment Size and is only
     /// available on TCP sockets.
-    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "wasi"))))]
+    #[cfg(all(feature = "all", not(any(target_os = "redox", any(target_os = "wasi", target_os = "hermit")))))]
     pub fn set_tcp_mss(&self, mss: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2219,7 +2287,7 @@ impl crate::Socket {
             target_os = "illumos",
             target_os = "cygwin",
             target_os = "nuttx",
-            target_os = "wasi"
+            any(target_os = "wasi", target_os = "hermit")
         ))
     ))]
     pub fn reuse_port(&self) -> io::Result<bool> {
@@ -2241,7 +2309,7 @@ impl crate::Socket {
             target_os = "illumos",
             target_os = "cygwin",
             target_os = "nuttx",
-            target_os = "wasi"
+            any(target_os = "wasi", target_os = "hermit")
         ))
     ))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
